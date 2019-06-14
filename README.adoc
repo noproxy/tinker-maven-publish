@@ -1,0 +1,106 @@
+= Tinker Maven Publish Plugin
+
+This is a gradle plugin to publish the artifacts required by https://github.com/Tencent/tinker[Tencent Tinker].
+It includes the android apk, mapping.txt and R.txt.
+In next build, if you set the baseVersion, this plugin will download artifacts and set to Tinker.
+
+== How to integrate
+
+. Using the plugins DSL:
+[source,gradle]
+----
+plugins {
+  id "io.github.noproxy.tinker-maven-publish" version "0.0.1"
+}
+----
+
+. Using legacy plugin application:
+[source,gradle]
+----
+buildscript {
+  repositories {
+    maven {
+      url "https://plugins.gradle.org/m2/"
+    }
+  }
+  dependencies {
+    classpath "gradle.plugin.io.github.noproxy.tinker-maven-publish:io.github.noproxy.tinker-maven-publish:0.0.1"
+  }
+}
+
+apply plugin: "io.github.noproxy.tinker-maven-publish"
+----
+
+== How to configure
+
+
+[source,groovy]
+----
+// this repo will be used to upload
+publishing {
+    repositories {
+        maven {
+            url 'https://to.your.private.maven.repo/'
+            name 'PrivateRepo'
+        }
+    }
+}
+
+// all values in the extension have default value. You can simply leave out.
+tinkerPublish {
+    // default is the version name of your appliaction
+    // this version is used to upload
+    version = "1.1.0"
+
+    // default "org.tinker.app"
+    groupId = "org.tinker.app"
+
+    // default is the 'applicationId' of your application
+    artifactId = "you artifact id"
+}
+
+// this will used to download
+repositories {
+    maven {
+        url 'https://to.your.private.maven.repo/'
+        name 'PrivateRepo'
+    }
+}
+
+tinkerResolver {
+    // version of the base apk, before Tinker build, we will download all files
+    version = "1.0.1"
+}
+----
+
+== How to use
+
+=== build and upload apk, mapping.txt and R.txt.
+
+Run:
+[source,bash]
+----
+./gradlew publishAppReleasePublicationToPrivateRepo
+----
+The `PrivateRepo` is the name of the maven repository you add in `publishing {}` block.
+
+=== specific version to build tinker patch
+
+You should set the baseVersion by 'tinkerResolver.version = 'xxx''.
+
+[source,groovy]
+----
+tinkerResolver {
+    version = "1.0.1"
+}
+----
+[NOTE]
+If you don't have any previous version, please set version to null. Because unresolved dependencies
+will cause the build abort.
+
+Then:
+
+[source,bash]
+----
+./gradlew tinkerPatchRelease
+----
