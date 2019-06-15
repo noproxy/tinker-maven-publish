@@ -18,6 +18,7 @@ plugins {
     id 'java-gradle-plugin'
     id 'groovy'
     id 'com.gradle.plugin-publish' version '0.10.1'
+    id 'com.github.noproxy.android-plugin-kit-plugin'
 }
 
 dependencies {
