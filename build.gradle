@@ -43,20 +43,20 @@ tasks.withType(Test) {
     }
 }
 // publishing
+assert ("com.github.noproxy" == group)
 assert ("tinker-maven-publish" == name)
-assert ("io.github.noproxy" == group)
 version = "0.0.6"
 
 apply from: rootProject.file("gradle/publishing.gradle")
 
 githubRelease {
-    body "Incontributing release."
+    body "Incubating release."
 }
 
 gradlePlugin {
     plugins {
         create("tinkerMavenPublish") {
-            id = "com.github.noproxy.tinker-maven-publish"
+            id = "${group}.${project.name}"
             implementationClass = "com.github.noproxy.plugin.tinker.TinkerMavenPublishPlugin"
         }
     }
