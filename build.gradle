@@ -56,7 +56,7 @@ githubRelease {
 gradlePlugin {
     plugins {
         create("tinkerMavenPublish") {
-            id = "${group}.tinker-maven-publish"
+            id = "com.github.noproxy.tinker-maven-publish"
             implementationClass = "com.github.noproxy.plugin.tinker.TinkerMavenPublishPlugin"
         }
     }
