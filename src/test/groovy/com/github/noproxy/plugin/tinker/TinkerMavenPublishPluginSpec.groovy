@@ -17,14 +17,22 @@
 package com.github.noproxy.plugin.tinker
 
 import com.github.noproxy.gradle.test.api.template.IntegrateSpecification
+import org.junit.Rule
+import org.junit.contrib.java.lang.system.ExpectedSystemExit
 
 
 class TinkerMavenPublishPluginSpec extends IntegrateSpecification {
+    /**
+     * Tinker fails with System.exit if patch process fails
+     */
+    @Rule
+    ExpectedSystemExit systemExit = ExpectedSystemExit.none()
+
     def "test publish apk to maven"() {
         given:
         buildFile """
 plugins {
-    id 'io.github.noproxy.tinker-maven-publish'
+    id 'com.github.noproxy.tinker-maven-publish'
     id 'com.android.application'
 }
 
@@ -78,7 +86,7 @@ publishing {
         }
 
         when:
-        run "publishAppReleasePublicationToBuildDir"
+        run "assembleRelease", "publishAppReleasePublicationToBuildDir"
 
         then:
         def apk = file("build/repo/org/tinker/app/org.example.app/2.3-release/org.example.app-2.3-release.apk")
@@ -91,7 +99,7 @@ publishing {
         given:
         buildFile """
 plugins {
-    id 'io.github.noproxy.tinker-maven-publish'
+    id 'com.github.noproxy.tinker-maven-publish'
     id 'com.android.application'
     id 'com.tencent.tinker.patch'
 }
@@ -180,22 +188,26 @@ tinkerPatch {
         newFile("build/repo/org/tinker/app/org.example.app/1.1-release/org.example.app-1.1-release.apk") << binaryApk()
         newFile("build/repo/org/tinker/app/org.example.app/1.1-release/org.example.app-1.1-release.pom") << pom()
 
+        systemExit.expectSystemExit()
         run "tinkerPatchRelease"
 
         then:
-        success()
+        fail()
         assert output.contains("")
-        def apk = file("build/repo/org/tinker/app/org.example.app/2.3-release/org.example.app-2.3-release.apk")
-        assert apk.exists()
-        def pom = file("build/repo/org/tinker/app/org.example.app/2.3-release/org.example.app-2.3-release.pom")
-        assert pom.exists()
+        with(output) {
+            contains "Can not find the R.txt file in Maven Repository, continue build without R file."
+            contains "Tinker patch begin"
+            contains "oldApk:${root}/build/repo/org/tinker/app/org.example.app/1.1-release/org.example.app-1.1-release.apk"
+            contains "newApk:${root}/build/outputs/apk/release/${root.name}-release-unsigned.apk"
+
+        }
     }
 
     def "test resolve apk mapping and r from maven"() {
         given:
         buildFile """
 plugins {
-    id 'io.github.noproxy.tinker-maven-publish'
+    id 'com.github.noproxy.tinker-maven-publish'
     id 'com.android.application'
     id 'com.tencent.tinker.patch'
 }
@@ -279,26 +291,27 @@ tinkerPatch {
         newFile("build/repo/org/tinker/app/org.example.app/1.1-release/org.example.app-1.1-release-r.txt") << rContent()
         newFile("build/repo/org/tinker/app/org.example.app/1.1-release/org.example.app-1.1-release.pom") << pom()
 
+        systemExit.expectSystemExit()
         run "tinkerPatchRelease"
 
         then:
-        success()
+        fail()
         assert !output.contains("Could not resolve all files for configuration ':tinkerResolveApkClasspath'")
         assert !output.contains("Could not find org.tinker.app:org.example.app:1.1-release.")
 
-
-        assert output.contains("")
-        def apk = file("build/repo/org/tinker/app/org.example.app/2.3-release/org.example.app-2.3-release.apk")
-        assert apk.exists()
-        def pom = file("build/repo/org/tinker/app/org.example.app/2.3-release/org.example.app-2.3-release.pom")
-        assert pom.exists()
+        with(output) {
+            contains "we build ${root.name} apk with apply resource mapping file ${root}/build/repo/org/tinker/app/org.example.app/1.1-release/org.example.app-1.1-release-r.txt"
+            contains "Tinker patch begin"
+            contains "oldApk:${root}/build/repo/org/tinker/app/org.example.app/1.1-release/org.example.app-1.1-release.apk"
+            contains "newApk:${root}/build/outputs/apk/release/${root.name}-release-unsigned.apk"
+        }
     }
 
     def "test resolve apk mapping and r from maven with ProGuard"() {
         given:
         buildFile """
 plugins {
-    id 'io.github.noproxy.tinker-maven-publish'
+    id 'com.github.noproxy.tinker-maven-publish'
     id 'com.android.application'
     id 'com.tencent.tinker.patch'
 }
@@ -390,20 +403,22 @@ tinkerPatch {
         newFile("build/repo/org/tinker/app/org.example.app/1.1-release/org.example.app-1.1-release-r.txt") << rContent()
         newFile("build/repo/org/tinker/app/org.example.app/1.1-release/org.example.app-1.1-release.pom") << pom()
 
+        systemExit.expectSystemExit()
         run "tinkerPatchRelease"
 
         then:
-        success()
+        fail()
         assert !output.contains("Could not resolve all files for configuration ':tinkerResolveApkClasspath'")
         assert !output.contains("Could not find org.tinker.app:org.example.app:1.1-release.")
         assert output.contains("Warning: org.example.app.MainActivity is not being kept as 'org.example.app.MainActivity', but remapped to 'test.a'")
 
 
-        assert output.contains("Tinker patch begin")
-        def apk = file("build/repo/org/tinker/app/org.example.app/2.3-release/org.example.app-2.3-release.apk")
-        assert apk.exists()
-        def pom = file("build/repo/org/tinker/app/org.example.app/2.3-release/org.example.app-2.3-release.pom")
-        assert pom.exists()
+        with(output) {
+            contains "we build ${root.name} apk with apply resource mapping file ${root}/build/repo/org/tinker/app/org.example.app/1.1-release/org.example.app-1.1-release-r.txt"
+            contains "Tinker patch begin"
+            contains "oldApk:${root}/build/repo/org/tinker/app/org.example.app/1.1-release/org.example.app-1.1-release.apk"
+            contains "newApk:${root}/build/outputs/apk/release/${root.name}-release-unsigned.apk"
+        }
     }
 
     static String mappingContent() {

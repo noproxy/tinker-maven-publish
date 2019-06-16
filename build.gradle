@@ -26,8 +26,6 @@ dependencies {
     implementation("org.jetbrains:annotations:13.0")
     implementation("org.apache.commons:commons-lang3:3.9")
     implementation("com.tencent.tinker:tinker-patch-gradle-plugin:1.9.13")
-
-    testImplementation(project(":test-kit-ext"))
 }
 
 repositories {
@@ -38,11 +36,6 @@ dependencies {
     implementation("com.android.tools.build:gradle:3.3.2")
 }
 
-tasks.withType(Test) {
-    doFirst {
-        file("build/tmp/testfiles").deleteDir()
-    }
-}
 // publishing
 assert ("com.github.noproxy" == group)
 assert ("tinker-maven-publish" == name)
@@ -75,3 +68,5 @@ pluginBundle {
         }
     }
 }
+
+apply from: rootProject.file('gradle/test_plugin.gradle')
