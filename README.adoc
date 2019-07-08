@@ -24,7 +24,7 @@ buildscript {
     }
   }
   dependencies {
-    classpath "gradle.plugin.io.github.noproxy.tinker-maven-publish:io.github.noproxy.tinker-maven-publish:0.0.1"
+    classpath "io.github.noproxy:tinker-maven-publish:0.0.1"
   }
 }
 
