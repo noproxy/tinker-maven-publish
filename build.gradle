@@ -37,7 +37,7 @@ dependencies {
 }
 
 // publishing
-assert ("com.github.noproxy" == group)
+assert ("io.github.noproxy" == group)
 assert ("tinker-maven-publish" == name)
 version = "0.0.6"
 
