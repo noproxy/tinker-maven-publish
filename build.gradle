@@ -39,7 +39,7 @@ dependencies {
 // publishing
 assert ("io.github.noproxy" == group)
 assert ("tinker-maven-publish" == name)
-version = "0.0.6"
+version = "0.0.7"
 
 apply from: rootProject.file("gradle/publishing.gradle")
 
@@ -51,7 +51,7 @@ gradlePlugin {
     plugins {
         create("tinkerMavenPublish") {
             id = "${group}.${project.name}"
-            implementationClass = "com.github.noproxy.plugin.tinker.TinkerMavenPublishPlugin"
+            implementationClass = "io.github.noproxy.plugin.tinker.TinkerMavenPublishPlugin"
         }
     }
 }

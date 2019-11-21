@@ -14,8 +14,13 @@
  * limitations under the License.
  */
 
-package com.github.noproxy.plugin.tinker.api;
+package io.github.noproxy.plugin.tinker.api;
 
-public interface TinkerMavenResolver {
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+public interface TinkerMavenResolverExtension {
+    void setLocatorFactory(@Nullable VariantArtifactsLocatorFactory factory);
+
+    void setVersion(@NotNull String versionOfBaseApk);
 }

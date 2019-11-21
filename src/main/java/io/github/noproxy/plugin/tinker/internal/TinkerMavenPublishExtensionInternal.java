@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package com.github.noproxy.plugin.tinker.internal;
+package io.github.noproxy.plugin.tinker.internal;
 
-import com.github.noproxy.plugin.tinker.api.TinkerMavenPublishExtension;
+import io.github.noproxy.plugin.tinker.api.TinkerMavenPublishExtension;
 
 import org.jetbrains.annotations.Nullable;
 

@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package com.github.noproxy.plugin.tinker.internal;
+package io.github.noproxy.plugin.tinker.api;
 
+import io.github.noproxy.plugin.tinker.internal.ArtifactType;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.ResolvedArtifact;
 import org.gradle.api.specs.Spec;

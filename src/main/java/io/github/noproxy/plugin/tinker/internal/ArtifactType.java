@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.github.noproxy.plugin.tinker.internal;
+package io.github.noproxy.plugin.tinker.internal;
 
 public enum ArtifactType {
     APK, MAPPING, SYMBOL

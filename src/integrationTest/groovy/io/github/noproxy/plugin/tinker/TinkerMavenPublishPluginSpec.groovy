@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.github.noproxy.plugin.tinker
+package io.github.noproxy.plugin.tinker
 
 import com.github.noproxy.gradle.test.api.template.IntegrateSpecification
 import org.junit.Rule
@@ -32,7 +32,7 @@ class TinkerMavenPublishPluginSpec extends IntegrateSpecification {
         given:
         buildFile """
 plugins {
-    id 'com.github.noproxy.tinker-maven-publish'
+    id 'io.github.noproxy.tinker-maven-publish'
     id 'com.android.application'
 }
 
@@ -99,7 +99,7 @@ publishing {
         given:
         buildFile """
 plugins {
-    id 'com.github.noproxy.tinker-maven-publish'
+    id 'io.github.noproxy.tinker-maven-publish'
     id 'com.android.application'
     id 'com.tencent.tinker.patch'
 }
@@ -207,7 +207,7 @@ tinkerPatch {
         given:
         buildFile """
 plugins {
-    id 'com.github.noproxy.tinker-maven-publish'
+    id 'io.github.noproxy.tinker-maven-publish'
     id 'com.android.application'
     id 'com.tencent.tinker.patch'
 }
@@ -311,7 +311,7 @@ tinkerPatch {
         given:
         buildFile """
 plugins {
-    id 'com.github.noproxy.tinker-maven-publish'
+    id 'io.github.noproxy.tinker-maven-publish'
     id 'com.android.application'
     id 'com.tencent.tinker.patch'
 }

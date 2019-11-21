@@ -14,34 +14,17 @@
  * limitations under the License.
  */
 
-package com.github.noproxy.plugin.tinker.internal;
+package io.github.noproxy.plugin.tinker.internal;
 
-import com.github.noproxy.plugin.tinker.api.TinkerMavenResolver;
-
+import com.android.build.gradle.api.ApplicationVariant;
+import io.github.noproxy.plugin.tinker.api.VariantArtifactsLocator;
+import io.github.noproxy.plugin.tinker.api.VariantArtifactsLocatorFactory;
 import org.jetbrains.annotations.NotNull;
 
-public class DefaultTinkerMavenResolverExtension implements TinkerMavenResolverExtensionInternal {
-    private String versionOfBaseApk;
-    private final TinkerMavenResolver resolver;
-
-    public DefaultTinkerMavenResolverExtension(TinkerMavenResolver resolver) {
-        this.resolver = resolver;
-    }
-
-    @Override
-
-    public String getVersion() {
-        return versionOfBaseApk;
-    }
-
-    @Override
-    public void setVersion(String version) {
-        this.versionOfBaseApk = version;
-    }
-
+public class DefaultVariantArtifactsLocatorFactory implements VariantArtifactsLocatorFactory {
     @NotNull
     @Override
-    public TinkerMavenResolver resolver() {
-        return resolver;
+    public VariantArtifactsLocator createLocator(@NotNull ApplicationVariant variant, @NotNull TinkerMavenPublishExtensionInternal extension, String resolveVersion) {
+        return new DefaultVariantArtifactsLocator(variant, extension.getGroupId(), extension.getArtifactId(), resolveVersion);
     }
 }

@@ -14,13 +14,18 @@
  * limitations under the License.
  */
 
-package com.github.noproxy.plugin.tinker.api;
+package io.github.noproxy.plugin.tinker.api;
 
+import com.android.build.gradle.api.ApplicationVariant;
+import io.github.noproxy.plugin.tinker.internal.TinkerMavenPublishExtensionInternal;
 import org.jetbrains.annotations.NotNull;
 
-public interface TinkerMavenResolverExtension {
+public interface VariantArtifactsLocatorFactory {
     @NotNull
-    TinkerMavenResolver resolver();
+    VariantArtifactsLocator createLocator(@NotNull ApplicationVariant variant, @NotNull TinkerMavenPublishExtensionInternal extension, String resolveVersion);
 
-    void setVersion(String versionOfBaseApk);
+    @NotNull
+    default VariantArtifactsLocator createLocator(@NotNull ApplicationVariant variant, @NotNull TinkerMavenPublishExtensionInternal extension) {
+        return createLocator(variant, extension, extension.getVersion());
+    }
 }

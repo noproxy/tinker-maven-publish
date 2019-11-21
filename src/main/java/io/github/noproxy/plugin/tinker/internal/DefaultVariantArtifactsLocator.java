@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package com.github.noproxy.plugin.tinker.internal;
+package io.github.noproxy.plugin.tinker.internal;
 
 import com.android.build.gradle.api.ApplicationVariant;
 import com.android.build.gradle.api.BaseVariant;
 
+import io.github.noproxy.plugin.tinker.api.VariantArtifactsLocator;
 import org.apache.commons.lang3.ObjectUtils;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.ResolvedArtifact;
@@ -45,16 +46,6 @@ public class DefaultVariantArtifactsLocator implements VariantArtifactsLocator {
         this.bareVersion = Objects.requireNonNull(ObjectUtils.firstNonNull(bareVersion, variant.getVersionName()),
                 "You must set a version to publish.");
     }
-
-
-    public DefaultVariantArtifactsLocator(@NotNull ApplicationVariant variant, @NotNull TinkerMavenPublishExtensionInternal extension) {
-        this(variant, extension, extension.getVersion());
-    }
-
-    public DefaultVariantArtifactsLocator(@NotNull ApplicationVariant variant, @NotNull TinkerMavenPublishExtensionInternal extension, String resolveVersion) {
-        this(variant, extension.getGroupId(), extension.getArtifactId(), resolveVersion);
-    }
-
 
     @NotNull
     @Override

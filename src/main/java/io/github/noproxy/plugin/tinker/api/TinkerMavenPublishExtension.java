@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.github.noproxy.plugin.tinker.api;
+package io.github.noproxy.plugin.tinker.api;
 
 public interface TinkerMavenPublishExtension {
     void setVersion(String version);

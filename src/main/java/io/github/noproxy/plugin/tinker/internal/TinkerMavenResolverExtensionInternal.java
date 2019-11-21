@@ -14,9 +14,17 @@
  * limitations under the License.
  */
 
-package com.github.noproxy.plugin.tinker.internal;
+package io.github.noproxy.plugin.tinker.internal;
 
-import com.github.noproxy.plugin.tinker.api.TinkerMavenResolver;
+import io.github.noproxy.plugin.tinker.api.TinkerMavenResolverExtension;
+import io.github.noproxy.plugin.tinker.api.VariantArtifactsLocatorFactory;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public class DefaultTinkerMavenResolver implements TinkerMavenResolver {
+public interface TinkerMavenResolverExtensionInternal extends TinkerMavenResolverExtension {
+    @Nullable
+    String getVersion();
+
+    @NotNull
+    VariantArtifactsLocatorFactory getLocatorFactory();
 }

@@ -14,29 +14,22 @@
  * limitations under the License.
  */
 
-package com.github.noproxy.plugin.tinker;
+package io.github.noproxy.plugin.tinker;
 
 import com.android.build.gradle.AppExtension;
 import com.android.build.gradle.AppPlugin;
 import com.android.build.gradle.api.ApplicationVariant;
-import com.github.noproxy.plugin.tinker.api.TinkerMavenPublishExtension;
-import com.github.noproxy.plugin.tinker.api.TinkerMavenResolver;
-import com.github.noproxy.plugin.tinker.api.TinkerMavenResolverExtension;
-import com.github.noproxy.plugin.tinker.internal.ArtifactType;
-import com.github.noproxy.plugin.tinker.internal.DefaultTinkerMavenPublishExtension;
-import com.github.noproxy.plugin.tinker.internal.DefaultTinkerMavenResolver;
-import com.github.noproxy.plugin.tinker.internal.DefaultTinkerMavenResolverExtension;
-import com.github.noproxy.plugin.tinker.internal.DefaultVariantArtifactsLocator;
-import com.github.noproxy.plugin.tinker.internal.TinkerMavenPublishExtensionInternal;
-import com.github.noproxy.plugin.tinker.internal.TinkerMavenResolverExtensionInternal;
-import com.github.noproxy.plugin.tinker.internal.VariantArtifactsLocator;
+import io.github.noproxy.plugin.tinker.api.TinkerMavenPublishExtension;
+import io.github.noproxy.plugin.tinker.api.TinkerMavenResolverExtension;
+import io.github.noproxy.plugin.tinker.api.VariantArtifactsLocator;
+import io.github.noproxy.plugin.tinker.api.VariantArtifactsLocatorFactory;
+import io.github.noproxy.plugin.tinker.internal.*;
 import com.google.common.base.Preconditions;
 import com.tencent.tinker.build.gradle.extension.TinkerBuildConfigExtension;
 import com.tencent.tinker.build.gradle.extension.TinkerPatchExtension;
 import com.tencent.tinker.build.gradle.task.TinkerPatchSchemaTask;
 import com.tencent.tinker.build.gradle.task.TinkerProguardConfigTask;
 import com.tencent.tinker.build.gradle.task.TinkerResourceIdTask;
-
 import org.gradle.api.Action;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -84,24 +77,22 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
                 (TinkerMavenPublishExtensionInternal) project.getExtensions().create(TinkerMavenPublishExtension.class,
                         "tinkerPublish", DefaultTinkerMavenPublishExtension.class);
 
-        final TinkerMavenResolver resolver = new DefaultTinkerMavenResolver();
-
-        final TinkerMavenResolverExtensionInternal tinkerResolverExtension = (TinkerMavenResolverExtensionInternal) project.getExtensions()
+        final TinkerMavenResolverExtensionInternal resolverExtension = (TinkerMavenResolverExtensionInternal) project.getExtensions()
                 .create(TinkerMavenResolverExtension.class, "tinkerResolver",
-                        DefaultTinkerMavenResolverExtension.class, resolver);
+                        DefaultTinkerMavenResolverExtension.class);
 
-        configurePublishing(project, publishExtension);
+        configurePublishing(project, resolverExtension, publishExtension);
 
         project.getPluginManager().withPlugin("com.tencent.tinker.patch", appliedPlugin -> {
-            project.afterEvaluate(ignored -> configureResolvingForTinker(project, tinkerResolverExtension, resolver, publishExtension));
+            project.afterEvaluate(ignored -> configureResolvingForTinker(project, resolverExtension, resolverExtension.getLocatorFactory(), publishExtension));
         });
     }
 
-    private void configurePublishing(Project project, TinkerMavenPublishExtensionInternal baseExtension) {
+    private void configurePublishing(Project project, TinkerMavenResolverExtensionInternal resolverExtension, TinkerMavenPublishExtensionInternal publishExtension) {
         withApplicationVariants(project, variant -> {
             final PublishingExtension publishing = project.getExtensions().getByType(PublishingExtension.class);
 
-            final VariantArtifactsLocator locator = new DefaultVariantArtifactsLocator(variant, baseExtension);
+            final VariantArtifactsLocator locator = resolverExtension.getLocatorFactory().createLocator(variant, publishExtension);
 
             variant.getOutputs().all(baseVariantOutput -> {
                 final File apk = baseVariantOutput.getOutputFile();
@@ -123,7 +114,7 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
                             artifact.setClassifier(locator.getClassifier(ArtifactType.MAPPING));
                         });
                     } else {
-                        project.getLogger().info("TinkerMavenPublish: skip publish mapping.txt for '\" + variant.getName() + \"' because minifyEnabled = false");
+                        project.getLogger().info("TinkerMavenPublish: skip publish mapping.txt for '" + variant.getName() + "' because minifyEnabled = false");
                     }
                     baseVariantOutput.getProcessResourcesProvider().configure(processAndroidResources -> {
                         processAndroidResources.doLast(task -> {
@@ -133,7 +124,7 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
                                     artifact.setClassifier(locator.getClassifier(ArtifactType.SYMBOL));
                                 });
                             } else {
-                                project.getLogger().warn("TinkerMavenPublish: skip publish R.txt for '\" + variant.getName() + \"' because file not exists");
+                                project.getLogger().warn("TinkerMavenPublish: skip publish R.txt for '" + variant.getName() + "' because file not exists");
                             }
                         });
                     });
@@ -144,7 +135,7 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
 
     private void configureResolvingForTinker(Project project,
                                              TinkerMavenResolverExtensionInternal resolverExtension,
-                                             TinkerMavenResolver resolver,
+                                             VariantArtifactsLocatorFactory locatorFactory,
                                              TinkerMavenPublishExtensionInternal publishExtension) {
         final String resolveVersion = resolverExtension.getVersion();
         if (resolveVersion == null) {
@@ -168,7 +159,7 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
         final TinkerPatchExtension tinkerPatch = project.getExtensions().getByType(TinkerPatchExtension.class);
         final TinkerBuildConfigExtension tinkerBuildConfig = ((ExtensionAware) tinkerPatch).getExtensions().getByType(TinkerBuildConfigExtension.class);
         withApplicationVariants(project, variant -> {
-            final DefaultVariantArtifactsLocator resolveLocator = new DefaultVariantArtifactsLocator(variant, publishExtension, resolveVersion);
+            final VariantArtifactsLocator resolveLocator = locatorFactory.createLocator(variant, publishExtension, resolveVersion);
             project.getDependencies().add(tinkerResolveApkClasspath.getName(), resolveLocator.getDependencyNotation(ArtifactType.APK));
 
             project.getDependencies().add(tinkerResolveClasspath.getName(), resolveLocator.getDependencyNotation(ArtifactType.SYMBOL));
