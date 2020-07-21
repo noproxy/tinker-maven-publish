@@ -118,7 +118,7 @@ public class DefaultResolver implements Resolver {
     private Configuration maybeCreate(String name, Action<? super Configuration> action) {
         Configuration created = project.getConfigurations().findByName(name);
         if (created == null) {
-            project.getConfigurations().create(name, action);
+            created = project.getConfigurations().create(name, action);
         }
 
         return created;
