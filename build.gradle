@@ -17,7 +17,7 @@
 plugins {
     id 'java-gradle-plugin'
     id 'groovy'
-    id 'com.gradle.plugin-publish' version '0.10.1'
+    id 'com.gradle.plugin-publish' version '0.12.0'
     id 'io.github.noproxy.android-plugin-kit-plugin' version '0.0.2'
 }
 
@@ -39,7 +39,7 @@ dependencies {
 // publishing
 assert ("io.github.noproxy" == group)
 assert ("tinker-maven-publish" == name)
-version = "0.0.7"
+version = "0.0.9"
 
 apply from: rootProject.file("gradle/publishing.gradle")
 

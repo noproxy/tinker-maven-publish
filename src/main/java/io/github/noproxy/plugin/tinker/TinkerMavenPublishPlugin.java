@@ -19,23 +19,20 @@ package io.github.noproxy.plugin.tinker;
 import com.android.build.gradle.AppExtension;
 import com.android.build.gradle.AppPlugin;
 import com.android.build.gradle.api.ApplicationVariant;
-import io.github.noproxy.plugin.tinker.api.TinkerMavenPublishExtension;
-import io.github.noproxy.plugin.tinker.api.TinkerMavenResolverExtension;
-import io.github.noproxy.plugin.tinker.api.VariantArtifactsLocator;
-import io.github.noproxy.plugin.tinker.api.VariantArtifactsLocatorFactory;
-import io.github.noproxy.plugin.tinker.internal.*;
-import com.google.common.base.Preconditions;
 import com.tencent.tinker.build.gradle.extension.TinkerBuildConfigExtension;
 import com.tencent.tinker.build.gradle.extension.TinkerPatchExtension;
 import com.tencent.tinker.build.gradle.task.TinkerPatchSchemaTask;
 import com.tencent.tinker.build.gradle.task.TinkerProguardConfigTask;
 import com.tencent.tinker.build.gradle.task.TinkerResourceIdTask;
+import io.github.noproxy.plugin.tinker.api.Resolver;
+import io.github.noproxy.plugin.tinker.api.TinkerMavenPublishExtension;
+import io.github.noproxy.plugin.tinker.api.TinkerMavenResolverExtension;
+import io.github.noproxy.plugin.tinker.api.VariantArtifactsLocator;
+import io.github.noproxy.plugin.tinker.internal.*;
 import org.gradle.api.Action;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ResolvedArtifact;
 import org.gradle.api.plugins.ExtensionAware;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenArtifact;
@@ -46,8 +43,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Objects;
 
 import static org.codehaus.groovy.runtime.StringGroovyMethods.capitalize;
 
@@ -58,15 +54,6 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
             final AppPlugin appPlugin = (AppPlugin) plugin;
             project.getExtensions().getByType(AppExtension.class).getApplicationVariants().all(action);
         });
-    }
-
-    private static <T> T assertSingleton(Set<T> collections) {
-        return assertSingleton(collections, null);
-    }
-
-    private static <T> T assertSingleton(Set<T> collections, String msg) {
-        Preconditions.checkArgument(collections.size() == 1, msg);
-        return collections.stream().findFirst().get();
     }
 
     @Override
@@ -83,9 +70,10 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
 
         configurePublishing(project, resolverExtension, publishExtension);
 
-        project.getPluginManager().withPlugin("com.tencent.tinker.patch", appliedPlugin -> {
-            project.afterEvaluate(ignored -> configureResolvingForTinker(project, resolverExtension, resolverExtension.getLocatorFactory(), publishExtension));
-        });
+        Resolver resolver = ((ExtensionAware) resolverExtension).getExtensions().create(Resolver.class, "api", DefaultResolver.class,
+                project, resolverExtension, publishExtension);
+
+        project.getPluginManager().withPlugin("com.tencent.tinker.patch", appliedPlugin -> project.afterEvaluate(ignored -> configureResolvingForTinker(project, resolver)));
     }
 
     private void configurePublishing(Project project, TinkerMavenResolverExtensionInternal resolverExtension, TinkerMavenPublishExtensionInternal publishExtension) {
@@ -133,75 +121,40 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
         });
     }
 
-    private void configureResolvingForTinker(Project project,
-                                             TinkerMavenResolverExtensionInternal resolverExtension,
-                                             VariantArtifactsLocatorFactory locatorFactory,
-                                             TinkerMavenPublishExtensionInternal publishExtension) {
-        final String resolveVersion = resolverExtension.getVersion();
-        if (resolveVersion == null) {
-            project.getLogger().lifecycle("TinkerMavenPublish: skip setup old apk for tinker because 'tinkerResolver.version' = null");
-            return;
-        }
-
-        // use separate configuration to resolve apk, because for other file, we use lenientConfiguration to ignore resolve error.
-        // but for the apk, we want gradle throw exception
-        final Configuration tinkerResolveApkClasspath = project.getConfigurations().create("tinkerResolveApkClasspath", files -> {
-            files.setCanBeConsumed(false);
-            files.setVisible(false);
-            files.setDescription("Configuration to resolve base version of apk files.");
-        });
-        final Configuration tinkerResolveClasspath = project.getConfigurations().create("tinkerResolveClasspath", files -> {
-            files.setCanBeConsumed(false);
-            files.setVisible(false);
-            files.setDescription("Configuration to resolve base version of mapping.txt and R.txt files.");
-        });
-
+    private void configureResolvingForTinker(Project project, Resolver resolver) {
         final TinkerPatchExtension tinkerPatch = project.getExtensions().getByType(TinkerPatchExtension.class);
         final TinkerBuildConfigExtension tinkerBuildConfig = ((ExtensionAware) tinkerPatch).getExtensions().getByType(TinkerBuildConfigExtension.class);
         withApplicationVariants(project, variant -> {
-            final VariantArtifactsLocator resolveLocator = locatorFactory.createLocator(variant, publishExtension, resolveVersion);
-            project.getDependencies().add(tinkerResolveApkClasspath.getName(), resolveLocator.getDependencyNotation(ArtifactType.APK));
-
-            project.getDependencies().add(tinkerResolveClasspath.getName(), resolveLocator.getDependencyNotation(ArtifactType.SYMBOL));
-            project.getDependencies().add(tinkerResolveClasspath.getName(), resolveLocator.getDependencyNotation(ArtifactType.MAPPING));
-
+            if (!tinkerPatch.isTinkerEnable()) {
+                return;
+            }
 
             final String variantName = capitalize(variant.getName());
             task(project, "tinkerPatch" + variantName, TinkerPatchSchemaTask.class, tinkerPatchSchemaTask -> {
-                tinkerPatchSchemaTask.doFirst(ignored -> {
-                    final Set<File> apk = tinkerResolveApkClasspath.getResolvedConfiguration().getFiles(resolveLocator.getDependencySpec(ArtifactType.APK));
-                    tinkerPatch.setOldApk(assertSingleton(apk, "Cannot find singleton apk file in Maven repository, we found: " + apk + ", ").getAbsolutePath());
-                });
+                tinkerPatchSchemaTask.doFirst(ignored -> tinkerPatch.setOldApk(Objects.requireNonNull(resolver.resolveApk(variant),
+                        "Cannot find base apk file in Maven repository").getAbsolutePath()));
             });
             maybeTask(project, "tinkerProcess" + variantName + "Proguard", TinkerProguardConfigTask.class, tinkerProguardConfigTask -> {
                 tinkerProguardConfigTask.doFirst(task -> {
-                    final Set<ResolvedArtifact> artifacts = tinkerResolveClasspath.getResolvedConfiguration().getLenientConfiguration()
-                            .getArtifacts(resolveLocator.getDependencySpec(ArtifactType.MAPPING));
-
-                    final Set<File> mappings = artifacts.stream().filter(resolveLocator.getResolvedArtifactSpec(ArtifactType.MAPPING))
-                            .map(ResolvedArtifact::getFile).collect(Collectors.toSet());
-                    if (mappings.isEmpty()) {
+                    File mapping = resolver.resolveMapping(variant);
+                    if (mapping == null) {
                         project.getLogger().warn("Can not find the mapping.txt file in Maven Repository, continue build without mapping file.");
                         return;
                     }
-                    final File mapping = assertSingleton(mappings);
+
                     tinkerBuildConfig.setApplyMapping(mapping.getAbsolutePath());
                     tinkerBuildConfig.setUsingResourceMapping(true);
                 });
             });
             task(project, "tinkerProcess" + variantName + "ResourceId", TinkerResourceIdTask.class, tinkerResourceIdTask -> {
                 tinkerResourceIdTask.doFirst(task -> {
-                    final Set<ResolvedArtifact> artifacts = tinkerResolveClasspath.getResolvedConfiguration().getLenientConfiguration()
-                            .getArtifacts(resolveLocator.getDependencySpec(ArtifactType.SYMBOL));
-                    final Set<File> symbol = artifacts.stream().filter(resolveLocator.getResolvedArtifactSpec(ArtifactType.SYMBOL))
-                            .map(ResolvedArtifact::getFile).collect(Collectors.toSet());
-
-                    if (symbol.isEmpty()) {
+                    final File symbol = resolver.resolveSymbol(variant);
+                    if (symbol == null) {
                         project.getLogger().warn("Can not find the R.txt file in Maven Repository, continue build without R file.");
                         return;
                     }
 
-                    tinkerBuildConfig.setApplyResourceMapping(assertSingleton(symbol).getAbsolutePath());
+                    tinkerBuildConfig.setApplyResourceMapping(symbol.getAbsolutePath());
                 });
             });
         });
