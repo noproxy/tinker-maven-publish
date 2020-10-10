@@ -71,6 +71,16 @@ tinkerResolver {
     // version of the base apk, before Tinker build, we will download all files
     version = "1.0.1"
 }
+
+/*
+    // If you want set local file as basement:
+tinkerResolver {
+    apk = 'local_file/1.0.1.apk'
+    mapping = 'local_file/1.0.1-mapping.txt'
+    symbol = 'local_file/1.0.1-symbol.txt'
+}
+*/
+ */
 ----
 
 == How to use
