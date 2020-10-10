@@ -28,6 +28,7 @@ import org.gradle.api.artifacts.ResolvedArtifact;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -59,18 +60,20 @@ public class DefaultResolver implements Resolver {
     @Override
     @Nullable
     public File resolveMapping(ApplicationVariant variant) {
-        if (resolverExtension.getVersion() == null) {
-            return null;
-        }
-
-        final VariantArtifactsLocator resolveLocator = locatorFactory.createLocator(variant, publishExtension, resolverExtension.getVersion());
+        final VariantArtifactsLocator resolveLocator = locatorFactory.createLocator(project, publishExtension, resolverExtension, variant);
         Configuration classpath = createResourceClasspath(variant, resolveLocator);
 
-        final Set<ResolvedArtifact> artifacts = classpath.getResolvedConfiguration().getLenientConfiguration()
-                .getArtifacts(resolveLocator.getDependencySpec(ArtifactType.MAPPING));
+        final Set<File> mappings;
+        if (resolveLocator instanceof MavenVariantArtifactsLocator) {
+            final Set<ResolvedArtifact> artifacts = classpath.getResolvedConfiguration().getLenientConfiguration()
+                    .getArtifacts(resolveLocator.getDependencySpec(ArtifactType.MAPPING));
+            mappings = artifacts.stream().filter(resolveLocator.getResolvedArtifactSpec(ArtifactType.MAPPING))
+                    .map(ResolvedArtifact::getFile).collect(Collectors.toSet());
+        } else {
+            mappings = classpath.getResolvedConfiguration().getLenientConfiguration()
+                    .getFiles(resolveLocator.getDependencySpec(ArtifactType.MAPPING));
+        }
 
-        final Set<File> mappings = artifacts.stream().filter(resolveLocator.getResolvedArtifactSpec(ArtifactType.MAPPING))
-                .map(ResolvedArtifact::getFile).collect(Collectors.toSet());
         if (mappings.isEmpty()) {
             return null;
         }
@@ -88,25 +91,33 @@ public class DefaultResolver implements Resolver {
             files.setVisible(false);
             files.setDescription("Configuration to resolve base version of mapping.txt and R.txt files.");
 
-            project.getDependencies().add(files.getName(), resolveLocator.getDependencyNotation(ArtifactType.SYMBOL));
-            project.getDependencies().add(files.getName(), resolveLocator.getDependencyNotation(ArtifactType.MAPPING));
+            final Object symbol = resolveLocator.getDependencyNotation(ArtifactType.SYMBOL);
+            if (symbol != null) {
+                project.getDependencies().add(files.getName(), symbol);
+            }
+            final Object mapping = resolveLocator.getDependencyNotation(ArtifactType.MAPPING);
+            if (mapping != null) {
+                project.getDependencies().add(files.getName(), mapping);
+            }
         });
     }
 
     @Override
     @Nullable
     public File resolveSymbol(ApplicationVariant variant) {
-        if (resolverExtension.getVersion() == null) {
-            return null;
-        }
-        final VariantArtifactsLocator resolveLocator = locatorFactory.createLocator(variant, publishExtension, resolverExtension.getVersion());
+        final VariantArtifactsLocator resolveLocator = locatorFactory.createLocator(project, publishExtension, resolverExtension, variant);
         Configuration classpath = createResourceClasspath(variant, resolveLocator);
 
-
-        final Set<ResolvedArtifact> artifacts = classpath.getResolvedConfiguration().getLenientConfiguration()
-                .getArtifacts(resolveLocator.getDependencySpec(ArtifactType.SYMBOL));
-        final Set<File> symbol = artifacts.stream().filter(resolveLocator.getResolvedArtifactSpec(ArtifactType.SYMBOL))
-                .map(ResolvedArtifact::getFile).collect(Collectors.toSet());
+        final Set<File> symbol;
+        if (resolveLocator instanceof MavenVariantArtifactsLocator) {
+            final Set<ResolvedArtifact> artifacts = classpath.getResolvedConfiguration().getLenientConfiguration()
+                    .getArtifacts(resolveLocator.getDependencySpec(ArtifactType.SYMBOL));
+            symbol = artifacts.stream().filter(resolveLocator.getResolvedArtifactSpec(ArtifactType.SYMBOL))
+                    .map(ResolvedArtifact::getFile).collect(Collectors.toSet());
+        } else {
+            symbol = classpath.getResolvedConfiguration().getLenientConfiguration()
+                    .getFiles(resolveLocator.getDependencySpec(ArtifactType.SYMBOL));
+        }
 
         if (symbol.isEmpty()) {
             return null;
@@ -127,10 +138,7 @@ public class DefaultResolver implements Resolver {
     @Override
     @Nullable
     public File resolveApk(ApplicationVariant variant) {
-        if (resolverExtension.getVersion() == null) {
-            return null;
-        }
-        final VariantArtifactsLocator resolveLocator = locatorFactory.createLocator(variant, publishExtension, resolverExtension.getVersion());
+        final VariantArtifactsLocator resolveLocator = locatorFactory.createLocator(project, publishExtension, resolverExtension, variant);
 
         final String variantName = capitalize(variant.getName());
         final Configuration tinkerResolveApkClasspath = maybeCreate("tinkerResolve" + variantName + "ApkClasspath", files -> {
@@ -138,7 +146,7 @@ public class DefaultResolver implements Resolver {
             files.setVisible(false);
             files.setDescription("Configuration to resolve base version of apk files.");
 
-            project.getDependencies().add(files.getName(), resolveLocator.getDependencyNotation(ArtifactType.APK));
+            project.getDependencies().add(files.getName(), Objects.requireNonNull(resolveLocator.getDependencyNotation(ArtifactType.APK)));
         });
 
 

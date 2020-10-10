@@ -181,7 +181,7 @@ tinkerPatch {
         run "tinkerPatchRelease"
         then:
         fail()
-        assert output.contains("Could not resolve all files for configuration ':tinkerResolveApkClasspath'")
+        assert output.contains("Could not resolve all files for configuration ':tinkerResolveReleaseApkClasspath'")
         assert output.contains("Could not find org.tinker.app:org.example.app:1.1-release.")
 
         when:
@@ -198,6 +198,230 @@ tinkerPatch {
             contains "Can not find the R.txt file in Maven Repository, continue build without R file."
             contains "Tinker patch begin"
             contains "oldApk:${root}/build/repo/org/tinker/app/org.example.app/1.1-release/org.example.app-1.1-release.apk"
+            contains "newApk:${root}/build/outputs/apk/release/${root.name}-release-unsigned.apk"
+
+        }
+    }
+
+    def "test resolve apk from local file"() {
+        given:
+        def apkPath = 'build/local_files/org.example.app-1.1-release.apk'
+        buildFile """
+plugins {
+    id 'io.github.noproxy.tinker-maven-publish'
+    id 'com.android.application'
+    id 'com.tencent.tinker.patch'
+}
+
+repositories {
+    jcenter()
+    google()
+}
+
+android {
+    defaultConfig {
+        applicationId "org.example.app"
+        compileSdkVersion 28
+    }
+}
+
+tinkerPublish {
+    version = "2.3"
+}
+
+tinkerResolver {
+    apk = '$apkPath'
+}
+
+tinkerPatch {
+    buildConfig {
+        tinkerId = "2.3"    
+    }
+    useSign = false
+    dex {
+        dexMode = "jar"
+        pattern = ["classes*.dex", "assets/secondary-dex-*.jar"]
+        loader = ["com.tencent.tinker.loader.*"]
+    }
+    lib {
+        pattern = ["lib/*/*.so"]
+    }
+    res {
+        pattern = ["res/*", "r/*", "assets/*", "resources.arsc", "AndroidManifest.xml"]
+        ignoreChange = ["assets/*_meta.txt"]
+        largeModSize = 100
+    }
+}
+
+"""
+        newFile("src/main/java/org/example/app/MainActivity.java") << "package org.example.app;\n" +
+                "\n" +
+                "import android.app.Activity;\n" +
+                "import android.os.Bundle;\n" +
+                "\n" +
+                "public class MainActivity extends Activity {\n" +
+                "\n" +
+                "    @Override\n" +
+                "    protected void onCreate(Bundle savedInstanceState) {\n" +
+                "        super.onCreate(savedInstanceState);\n" +
+                "        System.out.println(getResources().getString(R.string.app_name));" +
+                "    }\n" +
+                "}"
+        newFile("src/main/res/values/strings.xml") << """<resources>
+    <string name="app_name">Example Demo</string>
+</resources>
+"""
+        android {
+            manifest {
+                packageName = "org.example.app"
+            }
+        }
+
+        when:
+        run "help"
+        then:
+        noExceptionThrown()
+
+        when:
+        run "tinkerPatchRelease"
+        then:
+        fail()
+        assert output.contains("build/local_files/org.example.app-1.1-release.apk is not exist, you must set the correct old apk value!")
+
+        when:
+        newFile("build/local_files/org.example.app-1.1-release.apk") << binaryApk()
+
+        systemExit.expectSystemExit()
+        run "tinkerPatchRelease"
+
+        then:
+        fail()
+        assert output.contains("")
+        with(output) {
+            contains "Can not find the R.txt file in Maven Repository, continue build without R file."
+            contains "Tinker patch begin"
+            contains "oldApk:${root}/$apkPath"
+            contains "newApk:${root}/build/outputs/apk/release/${root.name}-release-unsigned.apk"
+
+        }
+    }
+
+    def "test resolve apk mapping and r from local file withProguard"() {
+        given:
+        def apkPath = 'build/local_files/org.example.app-1.1-release.apk'
+        def mappingPath = 'build/local_files/org.example.app-1.1-release.mapping'
+        def symbolPath = 'build/local_files/org.example.app-1.1-release.txt'
+        buildFile """
+plugins {
+    id 'io.github.noproxy.tinker-maven-publish'
+    id 'com.android.application'
+    id 'com.tencent.tinker.patch'
+}
+
+repositories {
+    jcenter()
+    google()
+}
+
+android {
+    defaultConfig {
+        applicationId "org.example.app"
+        compileSdkVersion 28
+    }
+    
+    buildTypes {
+        release {
+            minifyEnabled = true
+            proguardFiles 'proguard-rules.pro'
+        }
+    }
+}
+
+tinkerPublish {
+    version = "2.3"
+}
+
+tinkerResolver {
+    apk = '$apkPath'
+    mapping = '$mappingPath'
+    symbol = '$symbolPath'
+}
+
+tinkerPatch {
+    buildConfig {
+        tinkerId = "2.3"    
+    }
+    useSign = false
+    dex {
+        dexMode = "jar"
+        pattern = ["classes*.dex", "assets/secondary-dex-*.jar"]
+        loader = ["com.tencent.tinker.loader.*"]
+    }
+    lib {
+        pattern = ["lib/*/*.so"]
+    }
+    res {
+        pattern = ["res/*", "r/*", "assets/*", "resources.arsc", "AndroidManifest.xml"]
+        ignoreChange = ["assets/*_meta.txt"]
+        largeModSize = 100
+    }
+}
+
+"""
+        newFile("proguard-rules.pro") << "-ignorewarnings\n-dontshrink\n"
+        newFile("src/main/java/org/example/app/MainActivity.java") << "package org.example.app;\n" +
+                "\n" +
+                "import android.app.Activity;\n" +
+                "import android.os.Bundle;\n" +
+                "\n" +
+                "public class MainActivity extends Activity {\n" +
+                "\n" +
+                "    @Override\n" +
+                "    protected void onCreate(Bundle savedInstanceState) {\n" +
+                "        super.onCreate(savedInstanceState);\n" +
+                "        System.out.println(getResources().getString(R.string.app_name));" +
+                "    }\n" +
+                "}"
+        newFile("src/main/res/values/strings.xml") << """<resources>
+    <string name="app_name">Example Demo</string>
+</resources>
+"""
+        android {
+            manifest {
+                packageName = "org.example.app"
+            }
+        }
+
+        when:
+        run "help"
+        then:
+        noExceptionThrown()
+
+        when:
+        run "tinkerPatchRelease"
+        then:
+        fail()
+        assert output.contains("$apkPath is not exist, you must set the correct old apk value!")
+
+        when:
+        newFile(apkPath) << binaryApk()
+        newFile(mappingPath) << mappingContent()
+        newFile(symbolPath) << rContent()
+
+        systemExit.expectSystemExit()
+        run "tinkerPatchRelease"
+
+        then:
+        fail()
+        assert !output.contains("Could not resolve all files for configuration ':tinkerResolveReleaseApkClasspath'")
+        assert !output.contains("Could not find ")
+
+        with(output) {
+            contains "we build ${root.name} apk with apply resource mapping file ${root}/$symbolPath"
+            contains "tinker add additionalParameters --stable-ids ${root}/"
+            contains "try add applymapping ${root}/$mappingPath to build the package"
+            contains "Tinker patch begin"
+            contains "oldApk:${root}/$apkPath"
             contains "newApk:${root}/build/outputs/apk/release/${root.name}-release-unsigned.apk"
 
         }
@@ -296,7 +520,7 @@ tinkerPatch {
 
         then:
         fail()
-        assert !output.contains("Could not resolve all files for configuration ':tinkerResolveApkClasspath'")
+        assert !output.contains("Could not resolve all files for configuration ':tinkerResolveReleaseApkClasspath'")
         assert !output.contains("Could not find org.tinker.app:org.example.app:1.1-release.")
 
         with(output) {
@@ -368,7 +592,7 @@ tinkerPatch {
 }
 
 """
-        newFile("proguard-rules.pro") << "-ignorewarnings"
+        newFile("proguard-rules.pro") << "-ignorewarnings\n-dontshrink\n"
         newFile("src/main/java/org/example/app/MainActivity.java") << "package org.example.app;\n" +
                 "\n" +
                 "import android.app.Activity;\n" +
@@ -410,7 +634,6 @@ tinkerPatch {
         fail()
         assert !output.contains("Could not resolve all files for configuration ':tinkerResolveApkClasspath'")
         assert !output.contains("Could not find org.tinker.app:org.example.app:1.1-release.")
-        assert output.contains("Warning: org.example.app.MainActivity is not being kept as 'org.example.app.MainActivity', but remapped to 'test.a'")
 
 
         with(output) {

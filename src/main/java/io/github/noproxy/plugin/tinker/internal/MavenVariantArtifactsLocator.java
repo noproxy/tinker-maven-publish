@@ -30,16 +30,16 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Objects;
 import java.util.function.Predicate;
 
-public class DefaultVariantArtifactsLocator implements VariantArtifactsLocator {
+public class MavenVariantArtifactsLocator implements VariantArtifactsLocator {
     private final BaseVariant variant;
     private final String groupId;
     private final String artifactId;
     private final String bareVersion;
 
-    public DefaultVariantArtifactsLocator(@NotNull ApplicationVariant variant,
-                                          @Nullable String groupId,
-                                          @Nullable String artifactId,
-                                          @Nullable String bareVersion) {
+    public MavenVariantArtifactsLocator(@NotNull ApplicationVariant variant,
+                                        @Nullable String groupId,
+                                        @Nullable String artifactId,
+                                        @Nullable String bareVersion) {
         this.variant = variant;
         this.groupId = ObjectUtils.firstNonNull(groupId, "org.tinker.app");
         this.artifactId = ObjectUtils.firstNonNull(artifactId, variant.getApplicationId());
@@ -48,19 +48,16 @@ public class DefaultVariantArtifactsLocator implements VariantArtifactsLocator {
     }
 
     @NotNull
-    @Override
     public String getGroupId() {
         return groupId;
     }
 
     @NotNull
-    @Override
     public String getArtifactId() {
         return artifactId;
     }
 
     @NotNull
-    @Override
     public String getVersion() {
         final StringBuilder version = new StringBuilder(bareVersion);
         final String flavorName = variant.getFlavorName();
@@ -73,7 +70,6 @@ public class DefaultVariantArtifactsLocator implements VariantArtifactsLocator {
     }
 
     @Nullable
-    @Override
     public String getClassifier(ArtifactType type) {
         switch (type) {
             case APK:
@@ -87,7 +83,6 @@ public class DefaultVariantArtifactsLocator implements VariantArtifactsLocator {
         }
     }
 
-    @Override
     @NotNull
     public String getExtension(ArtifactType type) {
         switch (type) {

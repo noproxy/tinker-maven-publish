@@ -21,10 +21,21 @@ import io.github.noproxy.plugin.tinker.api.VariantArtifactsLocatorFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
+
 public interface TinkerMavenResolverExtensionInternal extends TinkerMavenResolverExtension {
     @Nullable
     String getVersion();
 
     @NotNull
     VariantArtifactsLocatorFactory getLocatorFactory();
+
+    @Nullable
+    File getSymbol();
+
+    @Nullable
+    File getMapping();
+
+    @Nullable
+    File getApk();
 }

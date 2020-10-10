@@ -17,15 +17,21 @@
 package io.github.noproxy.plugin.tinker.api;
 
 import com.android.build.gradle.api.ApplicationVariant;
+import io.github.noproxy.plugin.tinker.internal.MavenVariantArtifactsLocator;
 import io.github.noproxy.plugin.tinker.internal.TinkerMavenPublishExtensionInternal;
+import io.github.noproxy.plugin.tinker.internal.TinkerMavenResolverExtensionInternal;
+import org.gradle.api.Project;
 import org.jetbrains.annotations.NotNull;
 
 public interface VariantArtifactsLocatorFactory {
     @NotNull
-    VariantArtifactsLocator createLocator(@NotNull ApplicationVariant variant, @NotNull TinkerMavenPublishExtensionInternal extension, String resolveVersion);
+    VariantArtifactsLocator createLocator(Project project, @NotNull TinkerMavenPublishExtensionInternal extension, @NotNull TinkerMavenResolverExtensionInternal resolverExtensionInternal, @NotNull ApplicationVariant variant);
 
     @NotNull
-    default VariantArtifactsLocator createLocator(@NotNull ApplicationVariant variant, @NotNull TinkerMavenPublishExtensionInternal extension) {
-        return createLocator(variant, extension, extension.getVersion());
+    MavenVariantArtifactsLocator createMavenLocator(@NotNull ApplicationVariant variant, @NotNull TinkerMavenPublishExtensionInternal extension, String resolveVersion);
+
+    @NotNull
+    default MavenVariantArtifactsLocator createMavenLocator(@NotNull ApplicationVariant variant, @NotNull TinkerMavenPublishExtensionInternal extension) {
+        return createMavenLocator(variant, extension, extension.getVersion());
     }
 }

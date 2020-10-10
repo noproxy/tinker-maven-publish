@@ -19,8 +19,16 @@ package io.github.noproxy.plugin.tinker.api;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
+
 public interface TinkerMavenResolverExtension {
     void setLocatorFactory(@Nullable VariantArtifactsLocatorFactory factory);
 
     void setVersion(@NotNull String versionOfBaseApk);
+
+    void setApk(@NotNull Object file);
+
+    void setMapping(@Nullable Object file);
+
+    void setSymbol(@Nullable Object file);
 }

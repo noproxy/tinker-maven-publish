@@ -66,7 +66,7 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
 
         final TinkerMavenResolverExtensionInternal resolverExtension = (TinkerMavenResolverExtensionInternal) project.getExtensions()
                 .create(TinkerMavenResolverExtension.class, "tinkerResolver",
-                        DefaultTinkerMavenResolverExtension.class);
+                        DefaultTinkerMavenResolverExtension.class, project);
 
         configurePublishing(project, resolverExtension, publishExtension);
 
@@ -80,7 +80,7 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
         withApplicationVariants(project, variant -> {
             final PublishingExtension publishing = project.getExtensions().getByType(PublishingExtension.class);
 
-            final VariantArtifactsLocator locator = resolverExtension.getLocatorFactory().createLocator(variant, publishExtension);
+            final MavenVariantArtifactsLocator locator = resolverExtension.getLocatorFactory().createMavenLocator(variant, publishExtension);
 
             variant.getOutputs().all(baseVariantOutput -> {
                 final File apk = baseVariantOutput.getOutputFile();

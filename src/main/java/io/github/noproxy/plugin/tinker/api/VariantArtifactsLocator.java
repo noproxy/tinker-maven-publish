@@ -26,22 +26,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.function.Predicate;
 
 public interface VariantArtifactsLocator {
-    @NotNull
-    String getGroupId();
-
-    @NotNull
-    String getArtifactId();
-
-    @NotNull
-    String getVersion();
-
     @Nullable
-    String getClassifier(ArtifactType type);
-
-    @NotNull
-    String getExtension(ArtifactType type);
-
-    @NotNull
     Object getDependencyNotation(ArtifactType type);
 
     @NotNull
