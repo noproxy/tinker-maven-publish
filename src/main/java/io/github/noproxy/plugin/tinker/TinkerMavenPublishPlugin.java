@@ -19,6 +19,7 @@ package io.github.noproxy.plugin.tinker;
 import com.android.build.gradle.AppExtension;
 import com.android.build.gradle.AppPlugin;
 import com.android.build.gradle.api.ApplicationVariant;
+import com.android.build.gradle.api.BaseVariantOutput;
 import com.tencent.tinker.build.gradle.extension.TinkerBuildConfigExtension;
 import com.tencent.tinker.build.gradle.extension.TinkerPatchExtension;
 import com.tencent.tinker.build.gradle.task.TinkerPatchSchemaTask;
@@ -33,6 +34,7 @@ import org.gradle.api.Action;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.gradle.api.logging.Logger;
 import org.gradle.api.plugins.ExtensionAware;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenArtifact;
@@ -44,6 +46,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.Optional;
 
 import static org.codehaus.groovy.runtime.StringGroovyMethods.capitalize;
 
@@ -81,41 +84,75 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
             final PublishingExtension publishing = project.getExtensions().getByType(PublishingExtension.class);
 
             final MavenVariantArtifactsLocator locator = resolverExtension.getLocatorFactory().createMavenLocator(variant, publishExtension);
+            variant.getOutputs().all(baseVariantOutput -> configuringAndroidArtifacts(project, variant, publishing, locator, baseVariantOutput));
+        });
+    }
 
-            variant.getOutputs().all(baseVariantOutput -> {
-                final File apk = baseVariantOutput.getOutputFile();
-                final File mapping = computeMappingFile(project, apk);
-                final File symbol = computeSymbolFile(project, apk);
+    private File findResguardApk(Logger logger, BaseVariantOutput baseVariantOutput) {
+        final File apk = baseVariantOutput.getOutputFile();
+        final String basename = apk.getName().split("\\.(?=[^.]+$)")[0];
 
-                publishing.getPublications().create("App" + capitalize(variant.getName()), MavenPublication.class, publication -> {
-                    publication.setGroupId(locator.getGroupId());
-                    publication.setArtifactId(locator.getArtifactId());
-                    publication.setVersion(locator.getVersion());
+        final File resguardDir = new File(apk.getParentFile(), "AndResGuard_" + basename);
+        final File primaryApk = new File(resguardDir, basename + "_aligned_unsigned" + ".apk");
+        if (primaryApk.exists()) {
+            logger.quiet("we found resguard apk: " + primaryApk);
+            return primaryApk;
+        }
 
-                    publication.artifact(apk, artifact -> {
-                        artifact.setExtension(locator.getExtension(ArtifactType.APK));
-                        artifact.setClassifier(locator.getClassifier(ArtifactType.APK));
-                    });
-                    if (variant.getBuildType().isMinifyEnabled()) {
-                        publication.artifact(mapping, artifact -> {
-                            artifact.setExtension(locator.getExtension(ArtifactType.MAPPING));
-                            artifact.setClassifier(locator.getClassifier(ArtifactType.MAPPING));
+
+        final File[] files = resguardDir.listFiles();
+        if (files == null) {
+            return null;
+        }
+        for (File maybeUsedApk : files) {
+            if (maybeUsedApk.isFile() && maybeUsedApk.getName().endsWith(".apk")) {
+                if (maybeUsedApk.getName().startsWith(basename)) {
+                    logger.warn("we found dir " + resguardDir + ", but the primary apk not found:" + primaryApk + ", use: " + maybeUsedApk);
+                    return maybeUsedApk;
+                }
+            }
+        }
+        logger.warn("we found dir " + resguardDir + ", but no apk found");
+        return null;
+    }
+
+    private void configuringAndroidArtifacts(Project project, ApplicationVariant variant,
+                                             PublishingExtension publishing, MavenVariantArtifactsLocator locator,
+                                             BaseVariantOutput baseVariantOutput) {
+        final File originApk = baseVariantOutput.getOutputFile();
+        final File resguardApk = findResguardApk(project.getLogger(), baseVariantOutput);
+
+        final File apk = Optional.ofNullable(resguardApk).orElse(originApk);
+        final File mapping = computeMappingFile(project, originApk);
+        final File symbol = computeSymbolFile(project, originApk);
+
+        publishing.getPublications().create("App" + capitalize(variant.getName()), MavenPublication.class, publication -> {
+            publication.setGroupId(locator.getGroupId());
+            publication.setArtifactId(locator.getArtifactId());
+            publication.setVersion(locator.getVersion());
+
+            publication.artifact(apk, artifact -> {
+                artifact.setExtension(locator.getExtension(ArtifactType.APK));
+                artifact.setClassifier(locator.getClassifier(ArtifactType.APK));
+            });
+            if (variant.getBuildType().isMinifyEnabled()) {
+                publication.artifact(mapping, artifact -> {
+                    artifact.setExtension(locator.getExtension(ArtifactType.MAPPING));
+                    artifact.setClassifier(locator.getClassifier(ArtifactType.MAPPING));
+                });
+            } else {
+                project.getLogger().info("TinkerMavenPublish: skip publish mapping.txt for '" + variant.getName() + "' because minifyEnabled = false");
+            }
+            baseVariantOutput.getProcessResourcesProvider().configure(processAndroidResources -> {
+                processAndroidResources.doLast(task -> {
+                    if (symbol.exists()) {
+                        final MavenArtifact symbolArtifact = publication.artifact(symbol, artifact -> {
+                            artifact.setExtension(locator.getExtension(ArtifactType.SYMBOL));
+                            artifact.setClassifier(locator.getClassifier(ArtifactType.SYMBOL));
                         });
                     } else {
-                        project.getLogger().info("TinkerMavenPublish: skip publish mapping.txt for '" + variant.getName() + "' because minifyEnabled = false");
+                        project.getLogger().warn("TinkerMavenPublish: skip publish R.txt for '" + variant.getName() + "' because file not exists");
                     }
-                    baseVariantOutput.getProcessResourcesProvider().configure(processAndroidResources -> {
-                        processAndroidResources.doLast(task -> {
-                            if (symbol.exists()) {
-                                final MavenArtifact symbolArtifact = publication.artifact(symbol, artifact -> {
-                                    artifact.setExtension(locator.getExtension(ArtifactType.SYMBOL));
-                                    artifact.setClassifier(locator.getClassifier(ArtifactType.SYMBOL));
-                                });
-                            } else {
-                                project.getLogger().warn("TinkerMavenPublish: skip publish R.txt for '" + variant.getName() + "' because file not exists");
-                            }
-                        });
-                    });
                 });
             });
         });

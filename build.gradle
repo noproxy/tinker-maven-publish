@@ -39,7 +39,7 @@ dependencies {
 // publishing
 assert ("io.github.noproxy" == group)
 assert ("tinker-maven-publish" == name)
-version = "0.0.11"
+version = "0.0.13"
 
 apply from: rootProject.file("gradle/publishing.gradle")
 
