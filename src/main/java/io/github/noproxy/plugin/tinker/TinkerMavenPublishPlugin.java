@@ -18,6 +18,7 @@ package io.github.noproxy.plugin.tinker;
 
 import com.android.build.gradle.AppExtension;
 import com.android.build.gradle.AppPlugin;
+import com.android.build.gradle.api.ApkVariant;
 import com.android.build.gradle.api.ApplicationVariant;
 import com.android.build.gradle.api.BaseVariantOutput;
 import com.tencent.tinker.build.gradle.extension.TinkerBuildConfigExtension;
@@ -123,8 +124,9 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
         final File resguardApk = findResguardApk(project.getLogger(), baseVariantOutput);
 
         final File apk = Optional.ofNullable(resguardApk).orElse(originApk);
-        final File mapping = computeMappingFile(project, originApk);
-        final File symbol = computeSymbolFile(project, originApk);
+
+        final File mapping = computeMappingFile(project, variant, originApk);
+        final File symbol = computeSymbolFile(project, variant, originApk);
 
         publishing.getPublications().create("App" + capitalize(variant.getName()), MavenPublication.class, publication -> {
             publication.setGroupId(locator.getGroupId());
@@ -214,17 +216,11 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
         return task;
     }
 
-    private File computeMappingFile(Project project, final File apk) {
-        final Path relativizeToDir = project.file("build/outputs/apk").toPath().relativize(apk.getParentFile().toPath());
-        final Path mapping = project.file("build/outputs/mapping").toPath().resolve(relativizeToDir).resolve("mapping.txt");
-
-        return mapping.toFile();
+    private File computeMappingFile(Project project, ApkVariant variant, final File apk) {
+        return variant.getMappingFile();
     }
 
-    private File computeSymbolFile(Project project, final File apk) {
-        final Path relativizeToDir = project.file("build/outputs/apk").toPath().relativize(apk.getParentFile().toPath());
-        final Path mapping = project.file("build/intermediates/symbols").toPath().resolve(relativizeToDir).resolve("R.txt");
-
-        return mapping.toFile();
+    private File computeSymbolFile(Project project,ApkVariant variant, final File apk) {
+        return project.file("build/intermediates/runtime_symbol_list/" + variant.getName() + "/R.txt");
     }
 }
