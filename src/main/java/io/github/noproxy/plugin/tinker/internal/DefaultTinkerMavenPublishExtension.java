@@ -17,11 +17,29 @@
 package io.github.noproxy.plugin.tinker.internal;
 
 import io.github.noproxy.plugin.tinker.api.TinkerMavenPublishExtension;
+import io.github.noproxy.plugin.tinker.api.VariantArtifactsLocatorFactory;
+import org.jetbrains.annotations.NotNull;
 
 public class DefaultTinkerMavenPublishExtension implements TinkerMavenPublishExtension, TinkerMavenPublishExtensionInternal {
     private String baseVersion;
     private String groupId;
     private String artifactId;
+    private VariantArtifactsLocatorFactory locatorFactory;
+
+    @NotNull
+    @Override
+    public VariantArtifactsLocatorFactory getLocatorFactory() {
+        if (locatorFactory == null) {
+            return new DefaultVariantArtifactsLocatorFactory();
+        }
+
+        return locatorFactory;
+    }
+
+    @Override
+    public void setLocatorFactory(VariantArtifactsLocatorFactory locatorFactory) {
+        this.locatorFactory = locatorFactory;
+    }
 
     @Override
     public void setVersion(String version) {

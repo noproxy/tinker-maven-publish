@@ -16,7 +16,11 @@
 
 package io.github.noproxy.plugin.tinker.api;
 
+import org.jetbrains.annotations.Nullable;
+
 public interface TinkerMavenPublishExtension {
+    void setLocatorFactory(@Nullable VariantArtifactsLocatorFactory factory);
+
     void setVersion(String version);
 
     void setGroupId(String groupId);

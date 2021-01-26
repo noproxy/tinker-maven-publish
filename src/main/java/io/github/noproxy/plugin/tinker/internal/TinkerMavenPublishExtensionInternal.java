@@ -17,10 +17,13 @@
 package io.github.noproxy.plugin.tinker.internal;
 
 import io.github.noproxy.plugin.tinker.api.TinkerMavenPublishExtension;
-
+import io.github.noproxy.plugin.tinker.api.VariantArtifactsLocatorFactory;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public interface TinkerMavenPublishExtensionInternal extends TinkerMavenPublishExtension {
+    @NotNull
+    VariantArtifactsLocatorFactory getLocatorFactory();
 
     @Nullable
     String getGroupId();

@@ -72,7 +72,7 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
                 .create(TinkerMavenResolverExtension.class, "tinkerResolver",
                         DefaultTinkerMavenResolverExtension.class, project);
 
-        configurePublishing(project, resolverExtension, publishExtension);
+        configurePublishing(project, publishExtension);
 
         Resolver resolver = ((ExtensionAware) resolverExtension).getExtensions().create(Resolver.class, "api", DefaultResolver.class,
                 project, resolverExtension, publishExtension);
@@ -80,11 +80,11 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
         project.getPluginManager().withPlugin("com.tencent.tinker.patch", appliedPlugin -> project.afterEvaluate(ignored -> configureResolvingForTinker(project, resolver)));
     }
 
-    private void configurePublishing(Project project, TinkerMavenResolverExtensionInternal resolverExtension, TinkerMavenPublishExtensionInternal publishExtension) {
+    private void configurePublishing(Project project, TinkerMavenPublishExtensionInternal publishExtension) {
         withApplicationVariants(project, variant -> {
             final PublishingExtension publishing = project.getExtensions().getByType(PublishingExtension.class);
 
-            final MavenVariantArtifactsLocator locator = resolverExtension.getLocatorFactory().createMavenLocator(variant, publishExtension);
+            final MavenVariantArtifactsLocator locator = publishExtension.getLocatorFactory().createMavenLocator(variant, publishExtension);
             variant.getOutputs().all(baseVariantOutput -> configuringAndroidArtifacts(project, variant, publishing, locator, baseVariantOutput));
         });
     }
