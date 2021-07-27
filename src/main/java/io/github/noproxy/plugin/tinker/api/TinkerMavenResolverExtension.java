@@ -31,4 +31,6 @@ public interface TinkerMavenResolverExtension {
     void setMapping(@Nullable Object file);
 
     void setSymbol(@Nullable Object file);
+
+    void ignoreMapping(boolean ignore);
 }

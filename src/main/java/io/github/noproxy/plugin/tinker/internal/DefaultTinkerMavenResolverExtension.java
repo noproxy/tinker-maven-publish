@@ -31,6 +31,7 @@ public class DefaultTinkerMavenResolverExtension implements TinkerMavenResolverE
     private File apk;
     private File mapping;
     private File symbol;
+    private boolean ignoreMapping = false;
 
     @Inject
     public DefaultTinkerMavenResolverExtension(Project project) {
@@ -70,6 +71,16 @@ public class DefaultTinkerMavenResolverExtension implements TinkerMavenResolverE
     @Override
     public void setSymbol(Object symbol) {
         this.symbol = project.file(symbol);
+    }
+
+    @Override
+    public void ignoreMapping(boolean ignore) {
+        ignoreMapping = ignore;
+    }
+
+    @Override
+    public boolean isIgnoreMapping() {
+        return ignoreMapping;
     }
 
     @Override

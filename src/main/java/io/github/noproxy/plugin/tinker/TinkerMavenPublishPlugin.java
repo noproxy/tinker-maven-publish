@@ -77,7 +77,7 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
         Resolver resolver = ((ExtensionAware) resolverExtension).getExtensions().create(Resolver.class, "api", DefaultResolver.class,
                 project, resolverExtension, publishExtension);
 
-        project.getPluginManager().withPlugin("com.tencent.tinker.patch", appliedPlugin -> project.afterEvaluate(ignored -> configureResolvingForTinker(project, resolver)));
+        project.getPluginManager().withPlugin("com.tencent.tinker.patch", appliedPlugin -> project.afterEvaluate(ignored -> configureResolvingForTinker(project, resolver, resolverExtension)));
     }
 
     private void configurePublishing(Project project, TinkerMavenPublishExtensionInternal publishExtension) {
@@ -160,7 +160,7 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
         });
     }
 
-    private void configureResolvingForTinker(Project project, Resolver resolver) {
+    private void configureResolvingForTinker(Project project, Resolver resolver, TinkerMavenResolverExtensionInternal resolverExtension) {
         final TinkerPatchExtension tinkerPatch = project.getExtensions().getByType(TinkerPatchExtension.class);
         final TinkerBuildConfigExtension tinkerBuildConfig = ((ExtensionAware) tinkerPatch).getExtensions().getByType(TinkerBuildConfigExtension.class);
         withApplicationVariants(project, variant -> {
@@ -175,6 +175,11 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
             });
             maybeTask(project, "tinkerProcess" + variantName + "Proguard", TinkerProguardConfigTask.class, tinkerProguardConfigTask -> {
                 tinkerProguardConfigTask.doFirst(task -> {
+                    if (resolverExtension.isIgnoreMapping()) {
+                        project.getLogger().warn("skip resolving the mapping.txt file because ignoreMapping = true");
+                        return;
+                    }
+
                     File mapping = resolver.resolveMapping(variant);
                     if (mapping == null) {
                         project.getLogger().warn("Can not find the mapping.txt file in Maven Repository, continue build without mapping file.");

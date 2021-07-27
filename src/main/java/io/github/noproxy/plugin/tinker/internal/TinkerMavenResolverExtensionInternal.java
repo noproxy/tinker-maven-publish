@@ -33,6 +33,8 @@ public interface TinkerMavenResolverExtensionInternal extends TinkerMavenResolve
     @Nullable
     File getSymbol();
 
+    boolean isIgnoreMapping();
+
     @Nullable
     File getMapping();
 
