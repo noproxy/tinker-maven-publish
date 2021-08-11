@@ -29,14 +29,15 @@ import com.tencent.tinker.build.gradle.task.TinkerResourceIdTask;
 import io.github.noproxy.plugin.tinker.api.Resolver;
 import io.github.noproxy.plugin.tinker.api.TinkerMavenPublishExtension;
 import io.github.noproxy.plugin.tinker.api.TinkerMavenResolverExtension;
-import io.github.noproxy.plugin.tinker.api.VariantArtifactsLocator;
 import io.github.noproxy.plugin.tinker.internal.*;
+import org.codehaus.groovy.runtime.StringGroovyMethods;
 import org.gradle.api.Action;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.plugins.ExtensionAware;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenArtifact;
 import org.gradle.api.publish.maven.MavenPublication;
@@ -45,7 +46,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -121,9 +121,11 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
                                              PublishingExtension publishing, MavenVariantArtifactsLocator locator,
                                              BaseVariantOutput baseVariantOutput) {
         final File originApk = baseVariantOutput.getOutputFile();
-        final File resguardApk = findResguardApk(project.getLogger(), baseVariantOutput);
 
-        final File apk = Optional.ofNullable(resguardApk).orElse(originApk);
+        final Provider<File> apkArtifactFileProvider = project.provider(() -> {
+            final File resguardApk = findResguardApk(project.getLogger(), baseVariantOutput);
+            return Optional.ofNullable(resguardApk).orElse(originApk);
+        });
 
         final File mapping = computeMappingFile(project, variant, originApk);
         final File symbol = computeSymbolFile(project, variant, originApk);
@@ -133,9 +135,23 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
             publication.setArtifactId(locator.getArtifactId());
             publication.setVersion(locator.getVersion());
 
-            publication.artifact(apk, artifact -> {
+            publication.artifact(apkArtifactFileProvider, artifact -> {
                 artifact.setExtension(locator.getExtension(ArtifactType.APK));
                 artifact.setClassifier(locator.getClassifier(ArtifactType.APK));
+
+                project.getGradle().getTaskGraph().whenReady(taskExecutionGraph -> {
+                    final Task resguardTask = project.getTasks().findByName("resguard" + StringGroovyMethods.capitalize(variant.getName()));
+                    if (resguardTask != null) {
+                        if (taskExecutionGraph.hasTask(resguardTask)) {
+                            artifact.builtBy(resguardTask);
+                        } else {
+                            project.getLogger().quiet("TinkerManvePublishPluign: we found resguard task but it's not in the task grapth," +
+                                    " it's normal if you build project without resguard tasks");
+                        }
+                    } else {
+                        project.getLogger().quiet("TinkerManvePublishPluign: not find resguard task, it's normal if you didn't apply resguard plugin");
+                    }
+                });
             });
             if (variant.getBuildType().isMinifyEnabled()) {
                 publication.artifact(mapping, artifact -> {
