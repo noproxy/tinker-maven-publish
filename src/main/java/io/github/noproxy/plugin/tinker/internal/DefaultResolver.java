@@ -84,7 +84,7 @@ public class DefaultResolver implements Resolver {
     // use separate configuration to resolve apk, because for other file, we use lenientConfiguration to ignore resolve error.
     // but for the apk, we want gradle throw exception
     private Configuration createResourceClasspath(ApplicationVariant variant, VariantArtifactsLocator resolveLocator) {
-        final String variantName = capitalize(variant.getName());
+        final String variantName = capitalize((CharSequence) variant.getName());
 
         return maybeCreate("tinkerResolve" + variantName + "Classpath", files -> {
             files.setCanBeConsumed(false);
@@ -140,7 +140,7 @@ public class DefaultResolver implements Resolver {
     public File resolveApk(ApplicationVariant variant) {
         final VariantArtifactsLocator resolveLocator = locatorFactory.createLocator(project, publishExtension, resolverExtension, variant);
 
-        final String variantName = capitalize(variant.getName());
+        final String variantName = capitalize((CharSequence) variant.getName());
         final Configuration tinkerResolveApkClasspath = maybeCreate("tinkerResolve" + variantName + "ApkClasspath", files -> {
             files.setCanBeConsumed(false);
             files.setVisible(false);

@@ -130,7 +130,7 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
         final File mapping = computeMappingFile(project, variant, originApk);
         final File symbol = computeSymbolFile(project, variant, originApk);
 
-        publishing.getPublications().create("App" + capitalize(variant.getName()), MavenPublication.class, publication -> {
+        publishing.getPublications().create("App" + capitalize((CharSequence) variant.getName()), MavenPublication.class, publication -> {
             publication.setGroupId(locator.getGroupId());
             publication.setArtifactId(locator.getArtifactId());
             publication.setVersion(locator.getVersion());
@@ -140,7 +140,7 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
                 artifact.setClassifier(locator.getClassifier(ArtifactType.APK));
 
                 project.getGradle().getTaskGraph().whenReady(taskExecutionGraph -> {
-                    final Task resguardTask = project.getTasks().findByName("resguard" + StringGroovyMethods.capitalize(variant.getName()));
+                    final Task resguardTask = project.getTasks().findByName("resguard" + StringGroovyMethods.capitalize((CharSequence) variant.getName()));
                     if (resguardTask != null) {
                         if (taskExecutionGraph.hasTask(resguardTask)) {
                             artifact.builtBy(resguardTask);
@@ -184,7 +184,7 @@ public class TinkerMavenPublishPlugin implements Plugin<Project> {
                 return;
             }
 
-            final String variantName = capitalize(variant.getName());
+            final String variantName = capitalize((CharSequence) variant.getName());
             task(project, "tinkerPatch" + variantName, TinkerPatchSchemaTask.class, tinkerPatchSchemaTask -> {
                 tinkerPatchSchemaTask.doFirst(ignored -> tinkerPatch.setOldApk(Objects.requireNonNull(resolver.resolveApk(variant),
                         "Cannot find base apk file in Maven repository").getAbsolutePath()));
